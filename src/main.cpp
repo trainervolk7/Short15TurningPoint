@@ -112,6 +112,7 @@ void opcontrol() {
 			pros::delay(200);
 		}
 		}
+
 		if (anglerButton.isPressed())
 		{
 			if(isAnglerLifted){
@@ -124,16 +125,15 @@ void opcontrol() {
 			pros::delay(200);
 		}
 		}
+
 		if (liftUpButton.isPressed())
 		{
 			lift.moveVelocity(-100);
-
-			if
-		}
 		if (liftDownButton.isPressed())
 		{
 			lift.moveVelocity(100);
 		}
 		//pros::delay(20);
 	}
+}
 }
