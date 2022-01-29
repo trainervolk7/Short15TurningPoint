@@ -1,5 +1,23 @@
 #include "main.h"
-
+#define clampPiston 'B'
+#define anglerPiston 'A'
+std::shared_ptr<ChassisController> drive =
+	ChassisControllerBuilder()
+		.withMotors( {-11,-12},{1,2})
+		// Green gearset, 4 in wheel diam, 11.5 im wheel track
+		// 36 to 60 gear ratio
+		.withDimensions({AbstractMotor::gearset::blue, (60.0/36.0)},{{3.25_in, 11_in}, imev5GreenTPR})
+		.build();
+		Controller controller;
+		pros::ADIDigitalOut clamp (clampPiston);
+		pros::ADIDigitalOut angler (anglerPiston);
+		ControllerButton clampButton (ControllerDigital::R1);
+		ControllerButton anglerButton (ControllerDigital::R2);
+		ControllerButton liftUpButton (ControllerDigital::L1);
+		ControllerButton liftDownButton (ControllerDigital::L2);
+		bool isClampClosed = false;
+		bool isAnglerLifted =false;
+		MotorGroup lift {-3,13};
 /**
  * A callback function for LLEMU's center button.
  *
@@ -7,6 +25,7 @@
  * "I was pressed!" and nothing.
  */
 void on_center_button() {
+	/*
 	static bool pressed = false;
 	pressed = !pressed;
 	if (pressed) {
@@ -14,6 +33,7 @@ void on_center_button() {
 	} else {
 		pros::lcd::clear_line(2);
 	}
+	*/
 }
 
 /**
@@ -23,10 +43,13 @@ void on_center_button() {
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
+	clamp.set_value(true);
+	/*
 	pros::lcd::initialize();
 	pros::lcd::set_text(1, "Hello PROS User!");
 
 	pros::lcd::register_btn1_cb(on_center_button);
+	*/
 }
 
 /**
@@ -74,19 +97,43 @@ void autonomous() {}
  * task, not resume it from where it left off.
  */
 void opcontrol() {
-	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	pros::Motor left_mtr(1);
-	pros::Motor right_mtr(2);
-
 	while (true) {
-		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
-		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
-		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);
-		int left = master.get_analog(ANALOG_LEFT_Y);
-		int right = master.get_analog(ANALOG_RIGHT_Y);
+		drive->getModel() -> arcade(controller.getAnalog(ControllerAnalog::leftY), controller.getAnalog(ControllerAnalog::rightX));
+		pros::delay(10);
+		if (clampButton.isPressed())
+		{
+			if(isClampClosed){
+			clamp.set_value(false);
+			isClampClosed=false;
+			pros::delay(200);
+		}else{
+			clamp.set_value(true);
+			isClampClosed=true;
+			pros::delay(200);
+		}
+		}
+		if (anglerButton.isPressed())
+		{
+			if(isAnglerLifted){
+			angler.set_value(false);
+			isAnglerLifted=false;
+			pros::delay(200);
+		}else{
+			angler.set_value(true);
+			isAnglerLifted=true;
+			pros::delay(200);
+		}
+		}
+		if (liftUpButton.isPressed())
+		{
+			lift.moveVelocity(-100);
 
-		left_mtr = left;
-		right_mtr = right;
-		pros::delay(20);
+			if
+		}
+		if (liftDownButton.isPressed())
+		{
+			lift.moveVelocity(100);
+		}
+		//pros::delay(20);
 	}
 }
