@@ -18,6 +18,8 @@ std::shared_ptr<ChassisController> drive =
 		bool isClampClosed = false;
 		bool isAnglerLifted =false;
 		MotorGroup lift {-3,13};
+
+
 /**
  * A callback function for LLEMU's center button.
  *
@@ -44,6 +46,7 @@ void on_center_button() {
  */
 void initialize() {
 	clamp.set_value(true);
+	lift.setBrakeMode(AbstractMotor::brakeMode(2));
 	/*
 	pros::lcd::initialize();
 	pros::lcd::set_text(1, "Hello PROS User!");
@@ -126,14 +129,39 @@ void opcontrol() {
 		}
 		}
 
-		if (liftUpButton.isPressed())
+		if (liftUpButton.changedToPressed())
 		{
 			lift.moveVelocity(-100);
-		if (liftDownButton.isPressed())
-		{
-			lift.moveVelocity(100);
+			if (liftUpButton.isPressed()&&liftDownButton.isPressed())
+			{
+				lift.moveVoltage(-500);
+			}
 		}
+		else if(liftUpButton.changedToReleased())
+		{
+			lift.moveVoltage(0);
+			if (liftUpButton.isPressed()&&liftDownButton.isPressed())
+			{
+				lift.moveVoltage(-500);
+			}
+		}
+		else if(liftDownButton.changedToPressed())
+		{
+			lift.moveVelocity(900);
+			if (liftUpButton.isPressed()&&liftDownButton.isPressed())
+			{
+				lift.moveVoltage(-500);
+			}
+		}
+		else if (liftDownButton.changedToReleased())
+		{
+			lift.moveVoltage(0);
+			if (liftUpButton.isPressed()&&liftDownButton.isPressed())
+			{
+				lift.moveVoltage(-500);
+			}
+		}
+
 		//pros::delay(20);
 	}
-}
 }
