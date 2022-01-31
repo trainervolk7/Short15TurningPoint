@@ -1,6 +1,7 @@
 #include "main.h"
 #define clampPiston 'B'
 #define anglerPiston 'A'
+
 std::shared_ptr<ChassisController> drive =
 	ChassisControllerBuilder()
 		.withMotors( {-11,-12},{1,2})
@@ -8,6 +9,15 @@ std::shared_ptr<ChassisController> drive =
 		// 36 to 60 gear ratio
 		.withDimensions({AbstractMotor::gearset::blue, (60.0/36.0)},{{3.25_in, 11_in}, imev5GreenTPR})
 		.build();
+		std::shared_ptr<AsyncMotionProfileController> profileController =
+				  AsyncMotionProfileControllerBuilder()
+				    .withLimits({
+				      1.0, // Maximum linear velocity of the Chassis in m/s
+				      2.0, // Maximum linear acceleration of the Chassis in m/s/s
+				      10.0 // Maximum linear jerk of the Chassis in m/s/s/s
+				    })
+				    .withOutput(drive)
+						.buildMotionProfileController();
 		Controller controller;
 		pros::ADIDigitalOut clamp (clampPiston);
 		pros::ADIDigitalOut angler (anglerPiston);
@@ -15,9 +25,18 @@ std::shared_ptr<ChassisController> drive =
 		ControllerButton anglerButton (ControllerDigital::R2);
 		ControllerButton liftUpButton (ControllerDigital::L1);
 		ControllerButton liftDownButton (ControllerDigital::L2);
+		ControllerButton ringIntakeButton (ControllerDigital::Y);
+		ControllerButton ringNonIntakeButton (ControllerDigital::B);
 		bool isClampClosed = false;
 		bool isAnglerLifted =false;
+		bool isRingOn = false;
 		MotorGroup lift {-3,13};
+		Motor ringMotor {14};
+		std::shared_ptr<AsyncPositionController<double, double>> liftControl =
+	AsyncPosControllerBuilder()
+		.withMotor(lift)
+		.build();
+
 
 
 /**
@@ -84,8 +103,63 @@ void competition_initialize() {}
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
-void autonomous() {}
+void autonomous() {
+	//while (true){
+	// std::shared_ptr<AsyncMotionProfileController> profileController =
+	// 		  AsyncMotionProfileControllerBuilder()
+	// 		    .withLimits({
+	// 		      1.0, // Maximum linear velocity of the Chassis in m/s
+	// 		      2.0, // Maximum linear acceleration of the Chassis in m/s/s
+	// 		      changeVelocity // Maximum linear jerk of the Chassis in m/s/s/s
+	// 		    })
+	// 		    .withOutput(drive)
+	// 		    .buildMotionProfileController();
+	// 			}
+		// profileController->generatePath(
+    // {{0_ft, 0_ft, 0_deg}, {3_ft, 0_ft, 0_deg}}, "A");
+		// changeVelocity=1.0;
+		// profileController->generatePath(
+		// {{0_ft, 0_ft, 0_deg}, {3_ft, 0_ft, 0_deg}}, "B");
+		clamp.set_value(false);
+		lift.setBrakeMode(AbstractMotor::brakeMode(2));
+		liftControl->setTarget(-100);
+		profileController->generatePath(
+		{{0_in, 0_in, 0_deg}, {29_in, 0_in, 0_deg}}, "A");
+		profileController->generatePath(
+		{{0_in, 0_in, 0_deg}, {65_in, 0_in, 0_deg}}, "B");
+		profileController->generatePath(
+		{{0_in, 0_in, 0_deg}, {13_in, 0_in, 0_deg}}, "C");
+		profileController->generatePath(
+		{{0_in, 0_in, 0_deg}, {15_in, 0_in, 0_deg}}, "D");
 
+		profileController->setTarget("A");
+		profileController->waitUntilSettled();
+		clamp.set_value(true);
+		pros::delay(20);
+		ringMotor.moveVelocity(300);
+		pros::delay(2500);
+		ringMotor.moveVelocity(0);
+		liftControl->setTarget(-700);
+		pros::delay(1000);
+		drive->turnAngle(-32_deg);
+		profileController->setTarget("B");
+		profileController->waitUntilSettled();
+		pros::delay(1000);
+		liftControl->setTarget(-2100);
+		pros::delay(1000);
+		drive->turnAngle(-32_deg);
+		profileController->setTarget("C");
+		profileController->waitUntilSettled();
+		pros::delay(1000);
+		liftControl->setTarget(-1500);
+		clamp.set_value(false);
+		liftControl->setTarget(-2100);
+		profileController->setTarget("D",true);
+
+		//drive->turnAngle(-32_deg);
+
+
+	}
 /**
  * Runs the operator control code. This function will be started in its own task
  * with the default priority and stack size whenever the robot is enabled via
@@ -161,7 +235,31 @@ void opcontrol() {
 				lift.moveVoltage(-500);
 			}
 		}
+		if (ringIntakeButton.isPressed())
+	{
+		if (isRingOn == false) {
+			ringMotor.moveVelocity(300);
+			isRingOn = true;
+		} else {
+			ringMotor.moveVelocity(0);
+			isRingOn = false;
+		}
+		pros::delay(200);
+	}
+
+	if (ringNonIntakeButton.isPressed())
+	{
+		if (isRingOn == false) {
+			ringMotor.moveVelocity(-300);
+			isRingOn = true;
+		} else {
+			ringMotor.moveVelocity(0);
+			isRingOn = false;
+		}
+		pros::delay(200);
+	}
 
 		//pros::delay(20);
 	}
+
 }
