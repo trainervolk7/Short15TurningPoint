@@ -235,6 +235,7 @@ void opcontrol() {
 				lift.moveVoltage(-500);
 			}
 		}
+
 		if (ringIntakeButton.isPressed())
 	{
 		if (isRingOn == false) {
