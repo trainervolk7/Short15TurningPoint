@@ -132,6 +132,11 @@ void autonomous() {
 		profileController->generatePath(
 		{{0_in, 0_in, 0_deg}, {15_in, 0_in, 0_deg}}, "D");
 
+		profileController->generatePath(
+		{{0_in, 0_in, 0_deg}, {25_in, 0_in, 0_deg}}, "E");
+		profileController->generatePath(
+		{{0_in, 0_in, 0_deg}, {3_in, 0_in, 0_deg}}, "F");
+
 		profileController->setTarget("A");
 		profileController->waitUntilSettled();
 		clamp.set_value(true);
@@ -141,7 +146,13 @@ void autonomous() {
 		ringMotor.moveVelocity(0);
 		liftControl->setTarget(-700);
 		pros::delay(1000);
-		drive->turnAngle(-32_deg);
+		profileController->setTarget("E",true);
+		profileController->waitUntilSettled();
+		clamp.set_value(false);
+		profileController->setTarget("F",true);
+		profileController->waitUntilSettled();
+
+		/*drive->turnAngle(-32_deg);
 		profileController->setTarget("B");
 		profileController->waitUntilSettled();
 		pros::delay(1000);
@@ -155,7 +166,7 @@ void autonomous() {
 		clamp.set_value(false);
 		liftControl->setTarget(-2100);
 		profileController->setTarget("D",true);
-
+*/
 		//drive->turnAngle(-32_deg);
 
 
