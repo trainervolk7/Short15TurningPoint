@@ -1,37 +1,42 @@
 #include "main.h"
-#define clampPiston 'B'
-#define anglerPiston 'A'
+#define lowerPiston 'A'
+#define liftPiston 'B'
 
 std::shared_ptr<ChassisController> drive =
 	ChassisControllerBuilder()
-		.withMotors( {-11,-12},{1,2})
+		.withMotors( {-8, 9, -10},{3, -2, 1})
 		// Green gearset, 4 in wheel diam, 11.5 im wheel track
 		// 36 to 60 gear ratio
-		.withDimensions({AbstractMotor::gearset::blue, (60.0/36.0)},{{3.25_in, 11_in}, imev5GreenTPR})
+		.withDimensions({AbstractMotor::gearset::blue},{{2.75_in, 12_in}, imev5BlueTPR}) //imev5GreenTPR
 		.build();
 		std::shared_ptr<AsyncMotionProfileController> profileController =
 				  AsyncMotionProfileControllerBuilder()
 				    .withLimits({
-				      1.0, // Maximum linear velocity of the Chassis in m/s
-				      2.0, // Maximum linear acceleration of the Chassis in m/s/s
+				      10.0, // Maximum linear velocity of the Chassis in m/s
+				      10.0, // Maximum linear acceleration of the Chassis in m/s/s
 				      10.0 // Maximum linear jerk of the Chassis in m/s/s/s
 				    })
 				    .withOutput(drive)
 						.buildMotionProfileController();
 		Controller controller;
-		pros::ADIDigitalOut clamp (clampPiston);
-		pros::ADIDigitalOut angler (anglerPiston);
-		ControllerButton clampButton (ControllerDigital::R1);
-		ControllerButton anglerButton (ControllerDigital::R2);
-		ControllerButton liftUpButton (ControllerDigital::L1);
-		ControllerButton liftDownButton (ControllerDigital::L2);
+		pros::ADIDigitalOut lowerClamp (lowerPiston);
+		pros::ADIDigitalOut LiftClamp (liftPiston);
+		ControllerButton lowerClampButton (ControllerDigital::R2);
+		ControllerButton LiftClampButton (ControllerDigital::R1);
+		ControllerButton liftUpButton (ControllerDigital::L2);   // fix naming or button (Actually moves down)
+		ControllerButton liftDownButton (ControllerDigital::L1); // (Actually moves up)
 		ControllerButton ringIntakeButton (ControllerDigital::Y);
 		ControllerButton ringNonIntakeButton (ControllerDigital::B);
-		bool isClampClosed = false;
-		bool isAnglerLifted =false;
+
+		ControllerButton setGoalPosition (ControllerDigital::up);
+		bool isInGoalPosition = false;
+		bool isInRingPosition = false;
+
+		bool isLowerClampClosed = false;
+		bool isLiftClampClosed =false;
 		bool isRingOn = false;
-		MotorGroup lift {-3,13};
-		Motor ringMotor {14};
+		Motor lift {4};
+		Motor ringMotor {-20};
 		std::shared_ptr<AsyncPositionController<double, double>> liftControl =
 	AsyncPosControllerBuilder()
 		.withMotor(lift)
@@ -64,14 +69,13 @@ void on_center_button() {
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-	clamp.set_value(true);
-	lift.setBrakeMode(AbstractMotor::brakeMode(2));
-	/*
-	pros::lcd::initialize();
-	pros::lcd::set_text(1, "Hello PROS User!");
+	lowerClamp.set_value(true);
+	lift.setBrakeMode(okapi::AbstractMotor::brakeMode(2));
+	lift.setGearing(okapi::AbstractMotor::gearset::green);
+	ringMotor.setGearing(okapi::AbstractMotor::gearset::blue);
+	lift.setEncoderUnits(okapi::AbstractMotor::encoderUnits::rotations);
+	lift.tarePosition();
 
-	pros::lcd::register_btn1_cb(on_center_button);
-	*/
 }
 
 /**
@@ -104,6 +108,36 @@ void competition_initialize() {}
  * from where it left off.
  */
 void autonomous() {
+	lift.setBrakeMode(AbstractMotor::brakeMode(2));
+	//liftControl->setTarget(0.16);
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {52_in, -11_in, 0_deg}}, "A");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {30_in, 15_in, 0_deg}}, "B");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {24_in, -24_in, -90_deg}}, "C");
+	//profileController->setTarget("A");
+	//profileController->waitUntilSettled();
+	profileController->setTarget("B",true);
+	profileController->waitUntilSettled();
+	profileController->setTarget("C",true);
+	profileController->waitUntilSettled();
+	//drive->turnAngle(30_deg);
+	/*profileController->setTarget("B");
+	profileController->waitUntilSettled();
+	drive->turnAngle(-30_deg);
+	profileController->setTarget("C");
+	profileController->waitUntilSettled();
+	*/
+
+
+
+
+
+
+
+
+
 	//while (true){
 	// std::shared_ptr<AsyncMotionProfileController> profileController =
 	// 		  AsyncMotionProfileControllerBuilder()
@@ -120,7 +154,7 @@ void autonomous() {
 		// changeVelocity=1.0;
 		// profileController->generatePath(
 		// {{0_ft, 0_ft, 0_deg}, {3_ft, 0_ft, 0_deg}}, "B");
-		clamp.set_value(false);
+		/*lowerClamp.set_value(false);
 		lift.setBrakeMode(AbstractMotor::brakeMode(2));
 		liftControl->setTarget(-100);
 		profileController->generatePath(
@@ -139,7 +173,7 @@ void autonomous() {
 
 		profileController->setTarget("A");
 		profileController->waitUntilSettled();
-		clamp.set_value(true);
+		lowerClamp.set_value(true);
 		pros::delay(20);
 		ringMotor.moveVelocity(300);
 		pros::delay(2500);
@@ -148,10 +182,10 @@ void autonomous() {
 		pros::delay(1000);
 		profileController->setTarget("E",true);
 		profileController->waitUntilSettled();
-		clamp.set_value(false);
+		lowerClamp.set_value(false);
 		profileController->setTarget("F",true);
 		profileController->waitUntilSettled();
-
+		*/
 		/*drive->turnAngle(-32_deg);
 		profileController->setTarget("B");
 		profileController->waitUntilSettled();
@@ -163,7 +197,7 @@ void autonomous() {
 		profileController->waitUntilSettled();
 		pros::delay(1000);
 		liftControl->setTarget(-1500);
-		clamp.set_value(false);
+		lowerClamp.set_value(false);
 		liftControl->setTarget(-2100);
 		profileController->setTarget("D",true);
 */
@@ -188,35 +222,35 @@ void opcontrol() {
 	while (true) {
 		drive->getModel() -> arcade(controller.getAnalog(ControllerAnalog::leftY), controller.getAnalog(ControllerAnalog::rightX));
 		pros::delay(10);
-		if (clampButton.isPressed())
+		if (lowerClampButton.isPressed())
 		{
-			if(isClampClosed){
-			clamp.set_value(false);
-			isClampClosed=false;
+			if(isLowerClampClosed){
+			lowerClamp.set_value(false);
+			isLowerClampClosed=false;
 			pros::delay(200);
 		}else{
-			clamp.set_value(true);
-			isClampClosed=true;
+			lowerClamp.set_value(true);
+			isLowerClampClosed=true;
 			pros::delay(200);
 		}
 		}
 
-		if (anglerButton.isPressed())
+		if (LiftClampButton.isPressed())
 		{
-			if(isAnglerLifted){
-			angler.set_value(false);
-			isAnglerLifted=false;
+			if(isLiftClampClosed){
+			LiftClamp.set_value(false);
+			isLiftClampClosed=false;
 			pros::delay(200);
 		}else{
-			angler.set_value(true);
-			isAnglerLifted=true;
+			LiftClamp.set_value(true);
+			isLiftClampClosed=true;
 			pros::delay(200);
 		}
 		}
 
 		if (liftUpButton.changedToPressed())
 		{
-			lift.moveVelocity(-100);
+			lift.moveVelocity(-1200);
 			if (liftUpButton.isPressed()&&liftDownButton.isPressed())
 			{
 				lift.moveVoltage(-500);
@@ -232,7 +266,7 @@ void opcontrol() {
 		}
 		else if(liftDownButton.changedToPressed())
 		{
-			lift.moveVelocity(900);
+			lift.moveVelocity(1200);
 			if (liftUpButton.isPressed()&&liftDownButton.isPressed())
 			{
 				lift.moveVoltage(-500);
@@ -249,8 +283,13 @@ void opcontrol() {
 
 		if (ringIntakeButton.isPressed())
 	{
+		if (!(lift.getPosition() >= 0.34 && lift.getPosition() <= 0.4))
+		{
+				liftControl->setTarget(0.35);
+				pros::delay(100);
+		}
 		if (isRingOn == false) {
-			ringMotor.moveVelocity(300);
+			ringMotor.moveVelocity(233);
 			isRingOn = true;
 		} else {
 			ringMotor.moveVelocity(0);
@@ -261,8 +300,13 @@ void opcontrol() {
 
 	if (ringNonIntakeButton.isPressed())
 	{
+		if (!(lift.getPosition() >= 0.34 && lift.getPosition() <= 0.4))
+		{
+				liftControl->setTarget(0.35);
+				//pros::delay(100);
+		}
 		if (isRingOn == false) {
-			ringMotor.moveVelocity(-300);
+			ringMotor.moveVelocity(-233);
 			isRingOn = true;
 		} else {
 			ringMotor.moveVelocity(0);
