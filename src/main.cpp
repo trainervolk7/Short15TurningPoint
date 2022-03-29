@@ -27,6 +27,7 @@ std::shared_ptr<ChassisController> drive =
 		ControllerButton liftDownButton (ControllerDigital::L1); // (Actually moves up)
 		ControllerButton ringIntakeButton (ControllerDigital::Y);
 		ControllerButton ringNonIntakeButton (ControllerDigital::B);
+		ControllerButton liftGoalPosition (ControllerDigital::X);
 
 		ControllerButton setGoalPosition (ControllerDigital::up);
 		bool isInGoalPosition = false;
@@ -40,6 +41,11 @@ std::shared_ptr<ChassisController> drive =
 		std::shared_ptr<AsyncPositionController<double, double>> liftControl =
 	AsyncPosControllerBuilder()
 		.withMotor(lift)
+		.build();
+
+		std::shared_ptr<AsyncPositionController<double, double>> ringChainControl  =
+	AsyncPosControllerBuilder()
+		.withMotor(ringMotor)
 		.build();
 
 
@@ -70,11 +76,14 @@ void on_center_button() {
  */
 void initialize() {
 	lowerClamp.set_value(true);
+	LiftClamp.set_value(true);
 	lift.setBrakeMode(okapi::AbstractMotor::brakeMode(2));
 	lift.setGearing(okapi::AbstractMotor::gearset::green);
 	ringMotor.setGearing(okapi::AbstractMotor::gearset::blue);
+	ringMotor.tarePosition();
 	lift.setEncoderUnits(okapi::AbstractMotor::encoderUnits::rotations);
 	lift.tarePosition();
+
 
 }
 
@@ -111,17 +120,39 @@ void autonomous() {
 	lift.setBrakeMode(AbstractMotor::brakeMode(2));
 	//liftControl->setTarget(0.16);
 	profileController->generatePath(
-	{{0_in, 0_in, 0_deg}, {52_in, -11_in, 0_deg}}, "A");
+	{{0_in, 0_in, 0_deg}, {58_in, -12_in, 25_deg}}, "A"); ///A works
 	profileController->generatePath(
-	{{0_in, 0_in, 0_deg}, {30_in, 15_in, 0_deg}}, "B");
+	{{0_in, 0_in, 0_deg}, {20_in, 25_in, 25_deg}}, "B");
 	profileController->generatePath(
-	{{0_in, 0_in, 0_deg}, {24_in, -24_in, -90_deg}}, "C");
-	//profileController->setTarget("A");
-	//profileController->waitUntilSettled();
+	{{0_in, 0_in, 0_deg}, {20_in, -9_in, -45_deg}}, "C"); //21 -4
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {24_in, -9_in, -45_deg}}, "D");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {47_in, 0_in, 0_deg}}, "E");
+
+	liftControl->setTarget(0.16);
+	LiftClamp.set_value(false);
+	profileController->setTarget("A");
+	profileController->waitUntilSettled();
+	LiftClamp.set_value(true);
+	lowerClamp.set_value(false);
 	profileController->setTarget("B",true);
 	profileController->waitUntilSettled();
 	profileController->setTarget("C",true);
 	profileController->waitUntilSettled();
+	lowerClamp.set_value(true);
+	profileController->setTarget("D");
+	profileController->waitUntilSettled();
+	drive ->turnAngle(103_deg);
+	profileController->setTarget("E");
+	profileController->waitUntilSettled();
+	LiftClamp.set_value(true);
+	liftControl->setTarget(2.026);
+	liftControl->waitUntilSettled();
+	drive ->turnAngle(90_deg);
+
+
+
 	//drive->turnAngle(30_deg);
 	/*profileController->setTarget("B");
 	profileController->waitUntilSettled();
@@ -250,7 +281,7 @@ void opcontrol() {
 
 		if (liftUpButton.changedToPressed())
 		{
-			lift.moveVelocity(-1200);
+			lift.moveVelocity(-200);
 			if (liftUpButton.isPressed()&&liftDownButton.isPressed())
 			{
 				lift.moveVoltage(-500);
@@ -266,7 +297,7 @@ void opcontrol() {
 		}
 		else if(liftDownButton.changedToPressed())
 		{
-			lift.moveVelocity(1200);
+			lift.moveVelocity(200);
 			if (liftUpButton.isPressed()&&liftDownButton.isPressed())
 			{
 				lift.moveVoltage(-500);
@@ -283,10 +314,10 @@ void opcontrol() {
 
 		if (ringIntakeButton.isPressed())
 	{
-		if (!(lift.getPosition() >= 0.34 && lift.getPosition() <= 0.4))
+		if (!(lift.getPosition() >= 0.45))
 		{
-				liftControl->setTarget(0.35);
-				pros::delay(100);
+				liftControl->setTarget(0.46);
+				//pros::delay(100);
 		}
 		if (isRingOn == false) {
 			ringMotor.moveVelocity(233);
@@ -300,10 +331,9 @@ void opcontrol() {
 
 	if (ringNonIntakeButton.isPressed())
 	{
-		if (!(lift.getPosition() >= 0.34 && lift.getPosition() <= 0.4))
+		if (!(lift.getPosition() >= 0.45))
 		{
-				liftControl->setTarget(0.35);
-				//pros::delay(100);
+				liftControl->setTarget(0.46);
 		}
 		if (isRingOn == false) {
 			ringMotor.moveVelocity(-233);
@@ -314,6 +344,19 @@ void opcontrol() {
 		}
 		pros::delay(200);
 	}
+
+	if (liftGoalPosition.isPressed())
+	{
+		ringMotor.moveVelocity(0);
+		isRingOn = false;
+		//ringMotor.moveAbsolute(0, 600);
+		//pros::delay(1000);
+		if (!(lift.getPosition() >= 0.15 && lift.getPosition() <= 0.17))
+		{
+				liftControl->setTarget(0.16);
+		}
+	}
+
 
 		//pros::delay(20);
 	}
