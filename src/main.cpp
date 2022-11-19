@@ -4,7 +4,7 @@
 
 std::shared_ptr<ChassisController> drive =
 	ChassisControllerBuilder()
-		.withMotors( {-8, 9, -10},{3, -2, 1})
+		.withMotors( {-18, 19, -20},{11, -12, 13})
 		// Green gearset, 4 in wheel diam, 11.5 im wheel track
 		// 36 to 60 gear ratio
 		.withDimensions({AbstractMotor::gearset::blue},{{2.75_in, 12_in}, imev5BlueTPR}) //imev5GreenTPR
@@ -12,7 +12,7 @@ std::shared_ptr<ChassisController> drive =
 		std::shared_ptr<AsyncMotionProfileController> profileController =
 				  AsyncMotionProfileControllerBuilder()
 				    .withLimits({
-				      10.0, // Maximum linear velocity of the Chassis in m/s
+				      15.0, // Maximum linear velocity of the Chassis in m/s
 				      10.0, // Maximum linear acceleration of the Chassis in m/s/s
 				      10.0 // Maximum linear jerk of the Chassis in m/s/s/s
 				    })
@@ -36,8 +36,8 @@ std::shared_ptr<ChassisController> drive =
 		bool isLowerClampClosed = false;
 		bool isLiftClampClosed =false;
 		bool isRingOn = false;
-		Motor lift {4};
-		Motor ringMotor {-20};
+		//Motor lift {14};
+		Motor ringMotor {-17};
 		std::shared_ptr<AsyncPositionController<double, double>> liftControl =
 	AsyncPosControllerBuilder()
 		.withMotor(lift)
@@ -78,13 +78,32 @@ void initialize() {
 	lowerClamp.set_value(true);
 	LiftClamp.set_value(true);
 	lift.setBrakeMode(okapi::AbstractMotor::brakeMode(2));
-	lift.setGearing(okapi::AbstractMotor::gearset::green);
+	lift.setGearing(okapi::AbstractMotor::gearset::red);
 	ringMotor.setGearing(okapi::AbstractMotor::gearset::blue);
 	ringMotor.tarePosition();
 	lift.setEncoderUnits(okapi::AbstractMotor::encoderUnits::rotations);
 	lift.tarePosition();
 
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {58_in, -12_in, 25_deg}}, "A"); ///A works
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {20_in, 25_in, 25_deg}}, "B");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {22_in, -9_in, -35_deg}}, "C"); //21 -4
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {30_in, -9_in, -35_deg}}, "D");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {47_in, 0_in, 0_deg}}, "E");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {20_in, 0_in, 0_deg}}, "Straight6");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {24_in, 0_in, 0_deg}}, "Straight24");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {20_in, 0_in, 0_deg}}, "prepare");
+	profileController->generatePath(
+	{{0_in, 0_in, 0_deg}, {6_in, 0_in, 0_deg}}, "RingLoad");
 
+	screen::init();
 }
 
 /**
@@ -119,40 +138,57 @@ void competition_initialize() {}
 void autonomous() {
 	lift.setBrakeMode(AbstractMotor::brakeMode(2));
 	//liftControl->setTarget(0.16);
-	profileController->generatePath(
-	{{0_in, 0_in, 0_deg}, {58_in, -12_in, 25_deg}}, "A"); ///A works
-	profileController->generatePath(
-	{{0_in, 0_in, 0_deg}, {20_in, 25_in, 25_deg}}, "B");
-	profileController->generatePath(
-	{{0_in, 0_in, 0_deg}, {20_in, -9_in, -45_deg}}, "C"); //21 -4
-	profileController->generatePath(
-	{{0_in, 0_in, 0_deg}, {24_in, -9_in, -45_deg}}, "D");
-	profileController->generatePath(
-	{{0_in, 0_in, 0_deg}, {47_in, 0_in, 0_deg}}, "E");
 
 	liftControl->setTarget(0.16);
 	LiftClamp.set_value(false);
+	//Drive to Yellow Goal
 	profileController->setTarget("A");
 	profileController->waitUntilSettled();
 	LiftClamp.set_value(true);
 	lowerClamp.set_value(false);
+	//Drive to Blue Goal
 	profileController->setTarget("B",true);
 	profileController->waitUntilSettled();
 	profileController->setTarget("C",true);
 	profileController->waitUntilSettled();
 	lowerClamp.set_value(true);
+	//liftControl->setTarget(2.026);
+	//Drive to Platform for yellow
 	profileController->setTarget("D");
 	profileController->waitUntilSettled();
-	drive ->turnAngle(103_deg);
+	liftControl->setTarget(2.026);
+	pros::delay(1000);
+	drive ->turnAngle(180_deg);
+	/*pros::delay(250);
 	profileController->setTarget("E");
 	profileController->waitUntilSettled();
-	LiftClamp.set_value(true);
 	liftControl->setTarget(2.026);
-	liftControl->waitUntilSettled();
+	pros::delay(1000);
 	drive ->turnAngle(90_deg);
-
-
-
+	pros::delay(500);
+	profileController->setTarget("Straight24");
+	profileController->waitUntilSettled();
+	LiftClamp.set_value(false);
+	profileController->setTarget("Straight24",true);
+	profileController->waitUntilSettled();
+	drive ->turnAngle(90_deg);
+	pros::delay(250);
+	ringMotor.moveVelocity(233);
+	profileController->setTarget("E");
+	profileController->waitUntilSettled();
+	drive ->turnAngle(-90_deg);
+	pros::delay(250);*/
+	ringMotor.moveVelocity(233);
+	profileController->setTarget("prepare");
+	profileController->waitUntilSettled();
+	//Ring Loading
+	for(int i = 1; i<=13; i++)
+	{
+	profileController->setTarget("RingLoad");
+	profileController->waitUntilSettled();
+	profileController->setTarget("RingLoad",true);
+	profileController->waitUntilSettled();
+	}
 	//drive->turnAngle(30_deg);
 	/*profileController->setTarget("B");
 	profileController->waitUntilSettled();
@@ -250,6 +286,11 @@ void autonomous() {
  * task, not resume it from where it left off.
  */
 void opcontrol() {
+	lowerClamp.set_value(true);
+	isLowerClampClosed=true;
+	LiftClamp.set_value(true);
+	isLiftClampClosed=true;
+
 	while (true) {
 		drive->getModel() -> arcade(controller.getAnalog(ControllerAnalog::leftY), controller.getAnalog(ControllerAnalog::rightX));
 		pros::delay(10);

@@ -75,6 +75,8 @@ void opcontrol(void);
 /**
  * You can add C++-only headers here
  */
+
+#include "screen.hpp"
 //#include <iostream>
 #endif
 
